@@ -106,6 +106,7 @@ function checkRequiredParams(config: Config, input: GetoptPartialResponse): void
   }
   Object.entries(config).forEach(([key, value]) => {
     if (!value || typeof value !== 'object') return;
+    if (!input[key] && !value.mandatory && !value.required) return;
     if ((value.mandatory || value.required) && !input[key]) {
       throwError(`Missing option: "--${key}"`);
     }
@@ -152,20 +153,26 @@ function getopt(config: Config = {}, command: string[]): GetoptResponse {
             if (isMultiple && result[key]) partial[key] = result[key].concat(value);
           });
           Object.assign(result, partial);
+        } else {
+          result[state.activeOption] = state.optionArgs;
         }
       } else {
         args.push(arg);
       }
       return;
     }
+
     parsedOption.forEach(option => {
       if (['h', 'help'].includes(option)) throwError('');
+
       let subconfig = config[option];
       if (!subconfig) {
         throwError(`Unknown option: "${arg}"`);
         return;
       }
+
       if (typeof subconfig === 'boolean') subconfig = {};
+
       const isMultiple = !!subconfig.multiple;
       if (result[option] && !isMultiple) throwError(`Option "--${option}" provided many times`);
       let expectedArgsCount = subconfig!.args;
